@@ -35,6 +35,7 @@ from lightning.pytorch.accelerators import AcceleratorRegistry
 from lightning.pytorch.accelerators.accelerator import Accelerator
 from lightning.pytorch.accelerators.cuda import CUDAAccelerator
 from lightning.pytorch.accelerators.mps import MPSAccelerator
+from lightning.pytorch.accelerators.neuron import NeuronAccelerator
 from lightning.pytorch.accelerators.xla import XLAAccelerator
 from lightning.pytorch.plugins import (
     _PLUGIN_INPUT,
@@ -413,6 +414,10 @@ class _AcceleratorConnector:
                 isinstance(self._accelerator_flag, str) and self._accelerator_flag in ("cuda", "gpu", "mps")
             ):
                 device = _determine_root_gpu_device(self._parallel_devices)
+            elif isinstance(self._accelerator_flag, NeuronAccelerator) or (
+                isinstance(self._accelerator_flag, str) and self._accelerator_flag == "neuron"
+            ):
+                device = self._parallel_devices[0]
             else:
                 device = "cpu"
             # TODO: lazy initialized device, then here could be self._strategy_flag = "single_device"
