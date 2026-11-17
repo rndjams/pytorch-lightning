@@ -528,6 +528,18 @@ def _setup_device_mesh(
             f" `tensor_parallel_size={tensor_parallel_size}` multiplied should equal the world size"
             f" ({world_size})."
         )
+    # When one parallel dimension is trivial (size 1), build a 1-D mesh instead of a 2-D mesh with a
+    # degenerate dimension. A 2-D mesh forces `init_device_mesh` to split the process group per
+    # dimension, which some backends (e.g. the AWS Neuron `neuron` backend) do not support. A 1-D
+    # mesh over the whole world avoids the split and is semantically identical when the other dim is 1.
+    if tensor_parallel_size == 1:
+        return init_device_mesh(
+            device_type=device.type, mesh_shape=(data_parallel_size,), mesh_dim_names=("data_parallel",)
+        )
+    if data_parallel_size == 1:
+        return init_device_mesh(
+            device_type=device.type, mesh_shape=(tensor_parallel_size,), mesh_dim_names=("tensor_parallel",)
+        )
     return init_device_mesh(
         device_type=device.type,
         mesh_shape=(data_parallel_size, tensor_parallel_size),
