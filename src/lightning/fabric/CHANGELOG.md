@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added `NeuronAccelerator` for the native TorchNeuron (`PrivateUse1` `neuron`) backend, enabling AWS Trainium/Inferentia training through `torch.accelerator` and the standard eager strategies ([#22119](https://github.com/Lightning-AI/pytorch-lightning/issues/22119))
+
 - Added `using_sparse_model` and `sparse_cuda_acceleration_factor` parameters to `Throughput` so MFU defaults to the dense peak and opts into the sparse peak explicitly ([#21743](https://github.com/Lightning-AI/pytorch-lightning/pull/21743))
 
 - Added support for remote storage (fsspec URLs) when saving and loading distributed checkpoints with `FSDPStrategy` ([#21775](https://github.com/Lightning-AI/pytorch-lightning/pull/21775))
@@ -17,6 +19,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added support for remote storage (fsspec URLs) in checkpoint consolidation (`python -m lightning.fabric.utilities.consolidate_checkpoint` and the `lightning consolidate` CLI) ([#21826](https://github.com/Lightning-AI/pytorch-lightning/pull/21826))
 
 ### Changed
+
+- `ModelParallelStrategy` now builds a 1-D device mesh when a parallel dimension is size 1, avoiding a per-dimension process-group split that some backends (e.g. AWS Neuron) do not support ([#22119](https://github.com/Lightning-AI/pytorch-lightning/issues/22119))
 
 -
 

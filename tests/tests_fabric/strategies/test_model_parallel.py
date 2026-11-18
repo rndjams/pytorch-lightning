@@ -428,3 +428,22 @@ def test_model_parallel_load_checkpoint_loads_non_tensor_metadata(monkeypatch, t
     mp._load_checkpoint(path=ckpt_dir, state=state, strict=False)
     assert isinstance(state["user_meta"], _NonTensorMeta)
     assert state["user_meta"].value == 42
+
+
+def test_setup_device_mesh_collapses_degenerate_dim(monkeypatch):
+    """When a parallel dimension is size 1, a 1-D device mesh is built (no per-dim group split)."""
+    import torch.distributed as dist
+
+    from lightning.fabric.strategies.model_parallel import _setup_device_mesh
+
+    monkeypatch.setenv("MASTER_ADDR", "127.0.0.1")
+    monkeypatch.setenv("MASTER_PORT", "29591")
+    dist.init_process_group(backend="gloo", rank=0, world_size=1)
+    try:
+        mesh = _setup_device_mesh(
+            data_parallel_size=1, tensor_parallel_size=1, world_size=1, device=torch.device("cpu")
+        )
+        assert mesh.ndim == 1
+        assert mesh.mesh_dim_names == ("data_parallel",)
+    finally:
+        dist.destroy_process_group()

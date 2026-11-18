@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added `NeuronAccelerator` (`accelerator="neuron"`) for the native TorchNeuron (`PrivateUse1` `neuron`) backend, enabling AWS Trainium/Inferentia training with the standard eager strategies (single-device, DDP, FSDP, ModelParallel) ([#22119](https://github.com/Lightning-AI/pytorch-lightning/issues/22119))
+
 - Added `suggest_integrations` flag to `Trainer` to control whether optional integration suggestions (e.g., litmodels, litlogger) are shown in logs ([#21632](https://github.com/Lightning-AI/pytorch-lightning/pull/21632))
 
 - Fixed ``ModelParallelStrategy`` single-file checkpointing when ``torch.compile`` wraps the model so optimizer states no longer raise ``KeyError`` during save ([#21357](https://github.com/Lightning-AI/pytorch-lightning/issues/21357))
@@ -27,6 +29,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added support for remote storage (fsspec URLs) when saving and loading distributed checkpoints with `ModelParallelStrategy` ([#21797](https://github.com/Lightning-AI/pytorch-lightning/issues/21797))
 
 ### Changed
+
+- The FSDP accelerator-connector guard now accepts a `NeuronAccelerator` (not only CUDA), and a single-device `neuron` selection is routed to its real device ([#22119](https://github.com/Lightning-AI/pytorch-lightning/issues/22119))
 
 - Changed the `dirpath` argument of `lightning.pytorch.profilers` profilers to accept `str | os.PathLike[str]` instead of `str | pathlib.Path` ([#21871](https://github.com/Lightning-AI/pytorch-lightning/pull/21871))
 
