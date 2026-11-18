@@ -19,4 +19,5 @@ Accelerators
     CPUAccelerator
     CUDAAccelerator
     MPSAccelerator
+    NeuronAccelerator
     XLAAccelerator

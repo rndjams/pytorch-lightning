@@ -13,6 +13,7 @@ accelerators
     Accelerator
     CPUAccelerator
     CUDAAccelerator
+    NeuronAccelerator
     XLAAccelerator
 
 callbacks

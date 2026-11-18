@@ -333,3 +333,13 @@ def test_distributed_sampler_wrapper_set_epoch():
     wrapper.set_epoch(5)  # Should not raise
     assert wrapper.epoch == 5
     assert sampler_non_callable.set_epoch == "not a method"  # Should remain unchanged
+
+
+def test_get_default_process_group_backend_for_neuron():
+    """The native TorchNeuron device maps to the 'neuron' c10d backend, not the gloo fallback."""
+    from unittest.mock import Mock
+
+    from lightning.fabric.utilities.distributed import _get_default_process_group_backend_for_device
+
+    assert _get_default_process_group_backend_for_device(Mock(type="neuron")) == "neuron"
+    assert _get_default_process_group_backend_for_device(Mock(type="cpu")) == "gloo"
