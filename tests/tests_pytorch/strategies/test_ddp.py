@@ -217,3 +217,28 @@ def test_ddp_dont_configure_sync_batchnorm(trainer_fn):
     trainer.strategy.setup(trainer)
     # because TrainerFn is not FITTING, model is not configured with sync batchnorm
     assert not isinstance(trainer.strategy.model.layer, torch.nn.modules.batchnorm.SyncBatchNorm)
+
+
+def test_maybe_suppress_ddp_param_verification():
+    """The guard no-ops DDP's param-shape verification only for backends known to lack it (neuron),
+    and always restores the original afterwards."""
+    import warnings
+
+    import torch.nn.parallel.distributed as ddp_mod
+
+    from lightning.pytorch.strategies.ddp import _maybe_suppress_ddp_param_verification
+
+    original = ddp_mod._verify_param_shape_across_processes
+
+    # supported backend / None -> pass through, no patching
+    for backend in ("gloo", "nccl", None):
+        with _maybe_suppress_ddp_param_verification(backend):
+            assert ddp_mod._verify_param_shape_across_processes is original
+        assert ddp_mod._verify_param_shape_across_processes is original
+
+    # unsupported backend -> suppressed inside the context, restored after
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with _maybe_suppress_ddp_param_verification("neuron"):
+            assert ddp_mod._verify_param_shape_across_processes is not original
+    assert ddp_mod._verify_param_shape_across_processes is original

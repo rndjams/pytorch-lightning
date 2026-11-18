@@ -32,6 +32,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 - The FSDP accelerator-connector guard now accepts a `NeuronAccelerator` (not only CUDA), and a single-device `neuron` selection is routed to its real device ([#22119](https://github.com/Lightning-AI/pytorch-lightning/issues/22119))
 
+- `DDPStrategy` now skips DDP's construction-time parameter-shape verification on process-group backends that don't support the required collective (e.g. the native Neuron `neuron` backend); gradient synchronization is unaffected ([#22119](https://github.com/Lightning-AI/pytorch-lightning/issues/22119))
+
 - Changed the `dirpath` argument of `lightning.pytorch.profilers` profilers to accept `str | os.PathLike[str]` instead of `str | pathlib.Path` ([#21871](https://github.com/Lightning-AI/pytorch-lightning/pull/21871))
 
 ### Removed

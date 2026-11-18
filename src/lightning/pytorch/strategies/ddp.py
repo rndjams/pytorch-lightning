@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union
 
@@ -30,6 +30,7 @@ from lightning.fabric.plugins import CheckpointIO, ClusterEnvironment
 from lightning.fabric.plugins.collectives.torch_collective import default_pg_timeout
 from lightning.fabric.strategies import _StrategyRegistry
 from lightning.fabric.utilities.distributed import (
+    _DDP_PARAM_VERIFICATION_UNSUPPORTED_BACKENDS,
     _distributed_is_initialized,
     _get_default_process_group_backend_for_device,
     _init_dist_connection,
@@ -48,12 +49,38 @@ from lightning.pytorch.strategies.parallel import ParallelStrategy
 from lightning.pytorch.strategies.strategy import TBroadcast, _ForwardRedirection
 from lightning.pytorch.trainer.states import TrainerFn
 from lightning.pytorch.utilities.exceptions import _augment_message
-from lightning.pytorch.utilities.rank_zero import rank_zero_deprecation, rank_zero_info, rank_zero_only
+from lightning.pytorch.utilities.rank_zero import rank_zero_deprecation, rank_zero_info, rank_zero_only, rank_zero_warn
 
 if TYPE_CHECKING:
     from torch.distributed.algorithms.model_averaging.averagers import ModelAverager
 
 log = logging.getLogger(__name__)
+
+
+@contextmanager
+def _maybe_suppress_ddp_param_verification(backend: Optional[str]):
+    """Skip DDP's cross-rank parameter-shape verification on backends that don't support the
+    collective it uses (an all_gather variant), e.g. the native Neuron ``neuron`` backend.
+
+    Gradient synchronization (all_reduce) is unaffected; only the one-time construction-time check is
+    bypassed. See Lightning-AI/pytorch-lightning#22119.
+    """
+    if backend not in _DDP_PARAM_VERIFICATION_UNSUPPORTED_BACKENDS:
+        yield
+        return
+    import torch.nn.parallel.distributed as _ddp_mod
+
+    rank_zero_warn(
+        f"The '{backend}' process-group backend does not support DDP's parameter-shape verification;"
+        " skipping it. Gradient synchronization is unaffected."
+    )
+    _original = _ddp_mod._verify_param_shape_across_processes
+    _ddp_mod._verify_param_shape_across_processes = lambda *args, **kwargs: None
+    try:
+        yield
+    finally:
+        _ddp_mod._verify_param_shape_across_processes = _original
+
 
 _DDP_FORK_ALIASES = (
     "ddp_fork",
@@ -205,7 +232,8 @@ class DDPStrategy(ParallelStrategy):
                 # Default stream avoids AccumulateGrad stream mismatch warnings during normal training.
                 ctx = torch.cuda.stream(torch.cuda.default_stream())
         with ctx:
-            return DistributedDataParallel(module=model, device_ids=device_ids, **self._ddp_kwargs)
+            with _maybe_suppress_ddp_param_verification(self._process_group_backend):
+                return DistributedDataParallel(module=model, device_ids=device_ids, **self._ddp_kwargs)
 
     def setup_distributed(self) -> None:
         log.debug(f"{self.__class__.__name__}: setting up distributed...")

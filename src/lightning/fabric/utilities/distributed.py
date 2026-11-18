@@ -313,6 +313,12 @@ def _get_default_process_group_backend_for_device(device: torch.device) -> str:
     return "gloo"
 
 
+# Process-group backends known to lack the collective that DDP uses to verify parameter shapes across
+# ranks at construction (an all_gather variant). Gradient synchronization (all_reduce) is unaffected;
+# only the one-time startup verification is. See Lightning-AI/pytorch-lightning#22119.
+_DDP_PARAM_VERIFICATION_UNSUPPORTED_BACKENDS = frozenset({"neuron"})
+
+
 class _DatasetSamplerWrapper(Dataset):
     """Dataset to create indexes from `Sampler` or `Iterable`"""
 
